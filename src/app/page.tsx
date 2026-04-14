@@ -1,148 +1,284 @@
 import styles from "./page.module.css";
 import Link from "next/link";
+import TypewriterText from "./components/TypewriterText";
 
 export default function LandingPage() {
   return (
     <div className={styles.landing}>
-      {/* -------- NAVBAR -------- */}
+      {/* ==================== NAVBAR ==================== */}
       <nav className={styles.nav} id="navbar">
-        <div className={styles["nav-brand"]}>
-          <div className={styles["nav-brand-icon"]} />
-          <span className={styles["nav-brand-name"]}>Beacon</span>
+        <div className={styles.navBrand}>
+          <div className={styles.navBrandIcon}>🛡️</div>
+          <span className={styles.navBrandName}>Beacon</span>
         </div>
-        <ul className={styles["nav-links"]}>
+        <ul className={styles.navLinks}>
           <li>
-            <a href="#features">Features</a>
+            <a href="#features" className={styles.navLink}>Features</a>
           </li>
           <li>
-            <a href="#how-it-works">How It Works</a>
+            <a href="#how-it-works" className={styles.navLink}>How It Works</a>
           </li>
           <li>
-            <Link href="/dashboard" className={`btn btn-primary ${styles["nav-cta"]}`}>
+            <a href="#cta" className={styles.navLink}>Demo</a>
+          </li>
+          <li>
+            <Link href="/dashboard" className={styles.navCta}>
               Launch Dashboard
             </Link>
           </li>
         </ul>
       </nav>
 
-      {/* -------- HERO -------- */}
+      {/* ==================== HERO ==================== */}
       <section className={styles.hero} id="hero">
-        {/* Radar background animation */}
-        <div className={styles["radar-container"]}>
-          <div className={styles["radar-ring"]} />
-          <div className={styles["radar-ring"]} />
-          <div className={styles["radar-ring"]} />
-          <div className={styles["radar-sweep"]} />
+        {/* Ambient glow orbs */}
+        <div className={styles.heroGlow}>
+          <div className={`${styles.glowOrb} ${styles.glowOrb1}`} />
+          <div className={`${styles.glowOrb} ${styles.glowOrb2}`} />
+          <div className={`${styles.glowOrb} ${styles.glowOrb3}`} />
         </div>
 
-        <div className={styles["hero-content"]}>
-          <div className={styles["hero-badge"]}>
-            <span className="pulse-dot" style={{ width: 6, height: 6, borderRadius: '50%', background: 'var(--accent)', animation: 'pulseDot 2s ease-in-out infinite' }} />
-            Powered by Google AI
+        {/* Radar background */}
+        <div className={styles.radarContainer}>
+          <div className={styles.radarRing} />
+          <div className={styles.radarRing} />
+          <div className={styles.radarRing} />
+          <div className={styles.radarRing} />
+          <div className={styles.radarSweep} />
+          <div className={styles.radarCenter} />
+        </div>
+
+        <div className={styles.heroContent}>
+          <div className={styles.heroBadge}>
+            <span className={styles.pulseDot} />
+            Powered by Google Gemini AI
           </div>
 
-          <h1>
-            Intelligent Crisis Response{" "}
-            <span className={styles["gradient-text"]}>
-              in Real Time
+          <h1 className={styles.heroTitle}>
+            Crisis Response{" "}
+            <span className={styles.gradientText}>
+              <TypewriterText 
+                phrases={["Reimagined", "Synchronized", "Accelerated", "Intelligent"]} 
+              />
             </span>
+            <br />
+            for Hospitality
           </h1>
 
-          <p className={styles["hero-subtitle"]}>
-            Beacon instantly detects threats, bridges language barriers with
-            AI translation, and synchronizes guests, staff &amp; first
-            responders on a single command map — so no one is left in the
-            dark.
+          <p className={styles.heroSubtitle}>
+            Beacon instantly detects threats via AI vision, bridges language
+            barriers with real-time translation, and synchronizes guests, staff
+            &amp; first responders on a unified command map.
           </p>
 
-          <div className={styles["hero-actions"]}>
-            <Link href="/dashboard" className="btn btn-primary">
+          <div className={styles.heroActions}>
+            <Link href="/dashboard" className={styles.btnPrimary}>
               🛡️ Open Command Center
             </Link>
-            <Link href="/sos" className="btn btn-critical">
+            <Link href="/sos" className={styles.btnCritical}>
               🚨 Guest SOS Portal
             </Link>
           </div>
+
+          {/* Trust stats */}
+          <div className={styles.heroTrust}>
+            <div className={styles.trustItem}>
+              <span className={styles.trustValue}>&lt;3s</span>
+              <span className={styles.trustLabel}>Detection Time</span>
+            </div>
+            <div className={styles.trustDivider} />
+            <div className={styles.trustItem}>
+              <span className={styles.trustValue}>40+</span>
+              <span className={styles.trustLabel}>Languages</span>
+            </div>
+            <div className={styles.trustDivider} />
+            <div className={styles.trustItem}>
+              <span className={styles.trustValue}>100%</span>
+              <span className={styles.trustLabel}>Real-Time Sync</span>
+            </div>
+          </div>
         </div>
       </section>
 
-      {/* -------- FEATURES -------- */}
+      {/* ==================== LIVE TICKER ==================== */}
+      <div className={styles.ticker}>
+        <div className={styles.tickerInner}>
+          <div className={styles.tickerLabel}>
+            <span className={styles.tickerDot} />
+            SYSTEM STATUS
+          </div>
+          <div className={styles.tickerMessages}>
+            <span className={styles.tickerMsg}>
+              ✓ AI Vision Engine: Online &nbsp;&nbsp;│&nbsp;&nbsp;
+              ✓ Translation Service: Active (42 languages) &nbsp;&nbsp;│&nbsp;&nbsp;
+              ✓ WebSocket Cluster: 0ms latency &nbsp;&nbsp;│&nbsp;&nbsp;
+              ✓ Threat Map: Nominal &nbsp;&nbsp;│&nbsp;&nbsp;
+              ⚡ Last Drill: 2m ago — All Clear
+            </span>
+          </div>
+        </div>
+      </div>
+
+      {/* ==================== FEATURES ==================== */}
       <section className={styles.features} id="features">
-        <div className={styles["features-header"]}>
-          <span className="label">Core Capabilities</span>
-          <h2>Three Pillars of Protection</h2>
+        <div className={styles.featuresHeader}>
+          <div className={styles.sectionLabel}>
+            <span className={styles.sectionLabelLine} />
+            Core Capabilities
+            <span className={styles.sectionLabelLine} />
+          </div>
+          <h2 className={styles.featuresTitle}>Three Pillars of Protection</h2>
+          <p className={styles.featuresSubtitle}>
+            Each module works independently, but together they form an
+            unbreakable chain of crisis intelligence.
+          </p>
         </div>
 
-        <div className={styles["features-grid"]}>
+        <div className={styles.featuresGrid}>
           {/* Card 1: AI Detection */}
-          <div className={`glass ${styles["feature-card"]}`}>
-            <div className={`${styles["feature-icon"]} ${styles["feature-icon-detect"]}`}>
+          <div className={styles.featureCard}>
+            <span className={styles.featureNumber}>01</span>
+            <div className={`${styles.featureIcon} ${styles.featureIconDetect}`}>
               🔍
             </div>
-            <h3>AI Threat Detection</h3>
-            <p>
-              Gemini 1.5 Pro continuously analyzes simulated surveillance
-              feeds to automatically detect weapons, smoke, or crowd
-              anomalies — triggering instant alerts without human
-              intervention.
+            <h3 className={styles.featureCardTitle}>AI Threat Detection</h3>
+            <p className={styles.featureCardDesc}>
+              Gemini 1.5 Pro continuously analyzes simulated surveillance feeds
+              to automatically detect weapons, smoke, or crowd anomalies —
+              triggering instant alerts without human intervention.
             </p>
+            <div className={styles.featureTags}>
+              <span className={styles.featureTag}>Gemini 1.5 Pro</span>
+              <span className={styles.featureTag}>Multimodal</span>
+              <span className={styles.featureTag}>Real-Time</span>
+            </div>
           </div>
 
           {/* Card 2: Communication Bridge */}
-          <div className={`glass ${styles["feature-card"]}`}>
-            <div className={`${styles["feature-icon"]} ${styles["feature-icon-bridge"]}`}>
+          <div className={styles.featureCard}>
+            <span className={styles.featureNumber}>02</span>
+            <div className={`${styles.featureIcon} ${styles.featureIconBridge}`}>
               🌐
             </div>
-            <h3>Multilingual SOS Bridge</h3>
-            <p>
+            <h3 className={styles.featureCardTitle}>Multilingual SOS Bridge</h3>
+            <p className={styles.featureCardDesc}>
               Distressed guests type in any language. Beacon instantly
               translates, extracts room numbers and severity, and pipes
-              structured alerts to the command dashboard — no language
-              barrier survives.
+              structured alerts to the command dashboard.
             </p>
+            <div className={styles.featureTags}>
+              <span className={styles.featureTag}>Google Translate</span>
+              <span className={styles.featureTag}>NLP</span>
+              <span className={styles.featureTag}>Entity Extraction</span>
+            </div>
           </div>
 
           {/* Card 3: Dynamic Map */}
-          <div className={`glass ${styles["feature-card"]}`}>
-            <div className={`${styles["feature-icon"]} ${styles["feature-icon-map"]}`}>
+          <div className={styles.featureCard}>
+            <span className={styles.featureNumber}>03</span>
+            <div className={`${styles.featureIcon} ${styles.featureIconMap}`}>
               🗺️
             </div>
-            <h3>Dynamic Threat Map</h3>
-            <p>
-              A live, interactive floor plan updated in real-time. Blocked
-              exits turn red, safe routes glow green, and every SOS pin
-              drops exactly where help is needed — giving first responders
-              the God&apos;s-Eye view.
+            <h3 className={styles.featureCardTitle}>Dynamic Threat Map</h3>
+            <p className={styles.featureCardDesc}>
+              A live, interactive floor plan updated in real-time. Blocked exits
+              turn red, safe routes glow green, and every SOS pin drops exactly
+              where help is needed.
+            </p>
+            <div className={styles.featureTags}>
+              <span className={styles.featureTag}>WebSockets</span>
+              <span className={styles.featureTag}>SVG Maps</span>
+              <span className={styles.featureTag}>Live Pins</span>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* ==================== HOW IT WORKS ==================== */}
+      <section className={styles.howItWorks} id="how-it-works">
+        <div className={styles.howItWorksHeader}>
+          <div className={styles.sectionLabel}>
+            <span className={styles.sectionLabelLine} />
+            Architecture
+            <span className={styles.sectionLabelLine} />
+          </div>
+          <h2 className={styles.featuresTitle}>From Threat to Response in Seconds</h2>
+          <p className={styles.featuresSubtitle}>
+            Beacon&apos;s pipeline ensures zero information loss from detection
+            to coordination.
+          </p>
+        </div>
+
+        <div className={styles.flowContainer}>
+          <div className={styles.flowStep}>
+            <div className={`${styles.flowStepNumber} ${styles.flowStepNumber1}`}>1</div>
+            <h4 className={styles.flowStepTitle}>Detect</h4>
+            <p className={styles.flowStepDesc}>
+              AI vision identifies the anomaly from camera feeds or guest SOS input.
+            </p>
+            <div className={styles.flowConnector}>→</div>
+          </div>
+
+          <div className={styles.flowStep}>
+            <div className={`${styles.flowStepNumber} ${styles.flowStepNumber2}`}>2</div>
+            <h4 className={styles.flowStepTitle}>Classify</h4>
+            <p className={styles.flowStepDesc}>
+              Gemini extracts severity, location, and threat type into structured data.
+            </p>
+            <div className={styles.flowConnector}>→</div>
+          </div>
+
+          <div className={styles.flowStep}>
+            <div className={`${styles.flowStepNumber} ${styles.flowStepNumber3}`}>3</div>
+            <h4 className={styles.flowStepTitle}>Broadcast</h4>
+            <p className={styles.flowStepDesc}>
+              WebSockets push alerts to all connected dashboards and guest devices instantly.
+            </p>
+            <div className={styles.flowConnector}>→</div>
+          </div>
+
+          <div className={styles.flowStep}>
+            <div className={`${styles.flowStepNumber} ${styles.flowStepNumber4}`}>4</div>
+            <h4 className={styles.flowStepTitle}>Coordinate</h4>
+            <p className={styles.flowStepDesc}>
+              The command map updates live, routing responders and guiding evacuations.
             </p>
           </div>
         </div>
       </section>
 
-      {/* -------- CTA -------- */}
-      <section className={styles["cta-section"]} id="how-it-works">
-        <h2>
-          Ready to See It in Action?
-        </h2>
-        <p>
-          Launch the command center to explore the full crisis simulation
-          dashboard, or open the SOS portal to experience the guest view.
-        </p>
-        <div className={styles["hero-actions"]}>
-          <Link href="/dashboard" className="btn btn-primary">
-            Launch Dashboard →
-          </Link>
-          <Link href="/sos" className="btn btn-ghost">
-            Try Guest SOS
-          </Link>
+      {/* ==================== CTA ==================== */}
+      <section className={styles.ctaSection} id="cta">
+        <div className={styles.ctaCard}>
+          <h2 className={styles.ctaTitle}>
+            Ready to See It In Action?
+          </h2>
+          <p className={styles.ctaSubtitle}>
+            Launch the command center to explore the full crisis simulation
+            dashboard, or open the SOS portal to experience the guest view.
+          </p>
+          <div className={styles.heroActions}>
+            <Link href="/dashboard" className={styles.btnPrimary}>
+              Launch Dashboard →
+            </Link>
+            <Link href="/sos" className={styles.btnGhost}>
+              Try Guest SOS
+            </Link>
+          </div>
         </div>
       </section>
 
-      {/* -------- FOOTER -------- */}
+      {/* ==================== FOOTER ==================== */}
       <footer className={styles.footer}>
         <p>
-          Built with 🤍 for the Google AI Solutions Challenge •{" "}
-          <span className={styles["footer-brand"]}>Beacon</span> © 2026
+          Built with 🤍 for Google AI Solutions Challenge •{" "}
+          <span className={styles.footerBrand}>Beacon</span> © 2026
         </p>
+        <ul className={styles.footerLinks}>
+          <li><a href="#features">Features</a></li>
+          <li><a href="#how-it-works">Architecture</a></li>
+          <li><a href="https://github.com" target="_blank" rel="noopener noreferrer">GitHub</a></li>
+        </ul>
       </footer>
     </div>
   );
