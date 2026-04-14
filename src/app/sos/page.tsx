@@ -1,8 +1,9 @@
 "use client";
 
 import styles from "./page.module.css";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Link from "next/link";
+import { socket } from "../lib/socket";
 
 interface Message {
   id: number;
@@ -21,40 +22,97 @@ export default function SOSPortal() {
     }
   ]);
   const [input, setInput] = useState("");
+  const [isAnalyzing, setIsAnalyzing] = useState(false);
 
-  const handleSend = (e: React.FormEvent) => {
+  useEffect(() => {
+    socket.connect();
+    return () => {
+      socket.disconnect();
+    };
+  }, []);
+
+  const handleSend = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!input.trim()) return;
+    if (!input.trim() || isAnalyzing) return;
+
+    const currentInput = input;
 
     // 1. Add user message
-    const userMsg: Message = { id: Date.now(), sender: 'user', text: input };
-    
-    // Simulate translation if not english (mock logic)
-    if (input.toLowerCase().includes("ayuda") || input.toLowerCase().includes("fuego")) {
-      userMsg.translation = "Help / Fire";
-    }
-
+    const userMsg: Message = { id: Date.now(), sender: 'user', text: currentInput };
     setMessages(prev => [...prev, userMsg]);
     setInput("");
+    setIsAnalyzing(true);
 
-    // 2. Simulate AI response / Automated action
-    setTimeout(() => {
-      let aiResponseText = "Help is on the way. Please stay calm. What is your room number?";
-      let isCriticalAlert = false;
+    // 2. Show "analyzing" indicator
+    const analyzingMsg: Message = {
+      id: Date.now() + 1,
+      sender: 'system',
+      text: "🔄 Analyzing your message with Gemini AI..."
+    };
+    setMessages(prev => [...prev, analyzingMsg]);
 
-      if (userMsg.translation || input.toLowerCase().includes("fire") || input.toLowerCase().includes("smoke")) {
-         aiResponseText = "FIRE DETECTED ON YOUR FLOOR. DO NOT USE ELEVATORS. Proceed to the East Stairwell immediately. Emergency services have been dispatched.";
-         isCriticalAlert = true;
+    // 3. Call Gemini AI Analysis
+    try {
+      const response = await fetch("/api/analyze", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ message: currentInput }),
+      });
+
+      if (!response.ok) {
+        throw new Error(`API returned ${response.status}`);
       }
+      
+      const analysis = await response.json();
 
+      // Remove the "analyzing" message
+      setMessages(prev => prev.filter(m => m.id !== analyzingMsg.id));
+
+      // 4. Emit enriched event to Dashboard
+      socket.emit("sos_alert", {
+        id: Date.now(),
+        type: (analysis.threatType || "Other") + " Alert",
+        location: analysis.room && analysis.room !== "Unknown" ? `Room ${analysis.room}` : "Lobby / Common Area",
+        time: new Date().toLocaleTimeString('en-US', { hour12: false }),
+        severity: analysis.severity || "warning",
+        desc: analysis.summary || currentInput,
+        aiData: analysis
+      });
+
+      // 5. Add AI response to chat
       const aiMsg: Message = {
-        id: Date.now() + 1,
+        id: Date.now() + 2,
         sender: 'system',
-        text: aiResponseText,
-        isAlert: isCriticalAlert
+        text: analysis.instructions || "Help is on the way. Please stay calm.",
+        isAlert: analysis.severity === 'critical'
       };
       setMessages(prev => [...prev, aiMsg]);
-    }, 1500);
+
+    } catch (err) {
+      console.error("AI Analysis failed:", err);
+
+      // Remove the "analyzing" message
+      setMessages(prev => prev.filter(m => m.id !== analyzingMsg.id));
+
+      // Fallback: emit basic event and show generic response
+      socket.emit("sos_alert", {
+        id: Date.now(),
+        type: "Guest SOS",
+        location: "Unknown",
+        time: new Date().toLocaleTimeString('en-US', { hour12: false }),
+        severity: "warning",
+        desc: currentInput
+      });
+
+      const fallbackMsg: Message = {
+        id: Date.now() + 2,
+        sender: 'system',
+        text: "Your signal has been received. Help is being dispatched. Please stay where you are."
+      };
+      setMessages(prev => [...prev, fallbackMsg]);
+    } finally {
+      setIsAnalyzing(false);
+    }
   };
 
   const insertQuickAction = (text: string) => {
@@ -81,7 +139,7 @@ export default function SOSPortal() {
           if (msg.isAlert) {
             return (
               <div key={msg.id} className={styles.safetyAlert}>
-                <h4><span className="pulse-dot" style={{ backgroundColor: 'currentColor', boxShadow: 'none' }} /> EVACUATION PROTOCOL</h4>
+                <h4>⚠️ EVACUATION PROTOCOL</h4>
                 <p>{msg.text}</p>
               </div>
             );
@@ -109,18 +167,19 @@ export default function SOSPortal() {
           <button className={styles.quickBtn} onClick={() => insertQuickAction("I need medical help")}>Medical Issue</button>
           <button className={styles.quickBtn} onClick={() => insertQuickAction("There is a fire / smoke")}>Fire/Smoke</button>
           <button className={styles.quickBtn} onClick={() => insertQuickAction("I am trapped in my room")}>Trapped</button>
-          <button className={styles.quickBtn} onClick={() => insertQuickAction("Ayuda por favor")}>Español SOS</button>
+          <button className={styles.quickBtn} onClick={() => insertQuickAction("Ayuda por favor, hay fuego en mi cuarto 305")}>Español SOS</button>
         </div>
 
         <form className={styles.inputBox} onSubmit={handleSend}>
           <input 
             type="text" 
             className={styles.textInput} 
-            placeholder="Type your emergency..." 
+            placeholder={isAnalyzing ? "Analyzing..." : "Type your emergency..."} 
             value={input}
             onChange={(e) => setInput(e.target.value)}
+            disabled={isAnalyzing}
           />
-          <button type="submit" className={styles.sendBtn} disabled={!input.trim()}>
+          <button type="submit" className={styles.sendBtn} disabled={!input.trim() || isAnalyzing}>
             ↗
           </button>
         </form>
