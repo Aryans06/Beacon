@@ -31,33 +31,38 @@ const initialIncidents: Incident[] = [
   { id: 3, type: "Crowd Anomaly", location: "Pool Deck", time: "12:35:10", severity: "info" }
 ];
 
+// Helper to get static coordinates for known locations
+function getCoordinatesForLocation(loc?: string): { x: number, y: number } {
+  if (!loc) return { x: 50, y: 50 };
+  const l = loc.toLowerCase();
+  if (l.includes("lobby")) return { x: 50, y: 80 };
+  if (l.includes("pool")) return { x: 20, y: 75 };
+  if (l.includes("412")) return { x: 20, y: 20 };
+  if (l.includes("305")) return { x: 50, y: 20 };
+  if (l.includes("east")) return { x: 80, y: 50 };
+  return { x: 40 + Math.random() * 20, y: 40 + Math.random() * 20 }; // Fallback central area
+}
+
 export default function Dashboard() {
   const [incidents, setIncidents] = useState<Incident[]>(initialIncidents);
   const [currentTime, setCurrentTime] = useState("");
   const [selectedIncidentId, setSelectedIncidentId] = useState<number | null>(1);
 
-  // Get the currently selected incident
   const selectedIncident = incidents.find(i => i.id === selectedIncidentId) || incidents[0];
 
   useEffect(() => {
-    // Simulated live clock
     const timer = setInterval(() => {
-      const now = new Date();
-      setCurrentTime(now.toLocaleTimeString('en-US', { hour12: false }));
+      setCurrentTime(new Date().toLocaleTimeString('en-US', { hour12: false }));
     }, 1000);
 
-    // Socket listeners
     socket.connect();
 
     socket.on("new_incident", (data: Incident) => {
-      // Map dynamic pin coords roughly
-      const mappedData = { 
-        ...data, 
-        x: data.x || 25 + Math.random() * 50, 
-        y: data.y || 25 + Math.random() * 50 
-      };
+      // Map coords based on extracted location
+      const coords = getCoordinatesForLocation(data.aiData?.room || data.location);
+      const mappedData = { ...data, x: coords.x, y: coords.y };
       setIncidents((prev) => [mappedData, ...prev]);
-      setSelectedIncidentId(mappedData.id); // Auto-select new incidents
+      setSelectedIncidentId(mappedData.id);
     });
 
     return () => {
@@ -69,7 +74,6 @@ export default function Dashboard() {
 
   return (
     <div className={styles.dashboard}>
-      {/* ... (Topbar remains same) */}
       <header className={styles.topbar}>
         <div className={styles.brand}>
           <div className={styles.brandIcon}>🛡️</div>
@@ -78,16 +82,13 @@ export default function Dashboard() {
 
         <div className={styles.sysStatus}>
           <div className={styles.statusItem}>
-            <span className={`${styles.statusDot} ${styles.statusActive}`} />
-            Gemini Vision
+            <span className={`${styles.statusDot} ${styles.statusActive}`} /> Gemini Vision
           </div>
           <div className={styles.statusItem}>
-            <span className={`${styles.statusDot} ${styles.statusActive}`} />
-            Translation Engine
+            <span className={`${styles.statusDot} ${styles.statusActive}`} /> Translation Engine
           </div>
           <div className={styles.statusItem}>
-            <span className={`${styles.statusDot} ${styles.statusCritical}`} />
-            Active Alert
+            <span className={`${styles.statusDot} ${styles.statusCritical}`} /> Active Alert
           </div>
         </div>
 
@@ -101,10 +102,7 @@ export default function Dashboard() {
         </div>
       </header>
 
-      {/* --- MAIN WORKSPACE --- */}
       <main className={styles.workspace}>
-        
-        {/* LEFT: Incident Feed */}
         <aside className={`${styles.panel} ${styles.feedPanel}`}>
           <div className={styles.panelHeader}>
             <span className={styles.panelTitle}>🔴 Live Incident Feed</span>
@@ -134,10 +132,9 @@ export default function Dashboard() {
           </div>
         </aside>
 
-        {/* CENTER: Dynamic Threat Map */}
         <section className={`${styles.panel} ${styles.mapPanel}`}>
           <div className={styles.panelHeader}>
-            <span className={styles.panelTitle}>🗺️ Dynamic Threat Map : Floor 1</span>
+            <span className={styles.panelTitle}>🗺️ Threat Map : Alpha Sector</span>
             <div style={{ display: 'flex', gap: '8px' }}>
               <button className="badge badge-info" style={{ background: 'transparent', cursor: 'pointer' }}>Floor 1</button>
               <button className="badge" style={{ background: 'transparent', cursor: 'pointer', border: '1px solid var(--glass-border)', color: 'var(--text-muted)' }}>Floor 2</button>
@@ -146,6 +143,41 @@ export default function Dashboard() {
           
           <div className={styles.mapContainer}>
             <div className={styles.blueprint}>
+              {/* Detailed SVG Floorplan */}
+              <svg className={styles.floorplanSvg} viewBox="0 0 100 100" preserveAspectRatio="none">
+                <defs>
+                  <pattern id="grid" width="4" height="4" patternUnits="userSpaceOnUse">
+                    <path d="M 4 0 L 0 0 0 4" fill="none" stroke="rgba(0, 229, 255, 0.05)" strokeWidth="0.5"/>
+                  </pattern>
+                </defs>
+                <rect width="100" height="100" fill="url(#grid)" />
+                
+                {/* Rooms and Corridors */}
+                {/* Room 412 (Top Left) */}
+                <rect x="5" y="5" width="30" height="30" fill="rgba(15, 26, 54, 0.4)" stroke="var(--glass-border)" strokeWidth="0.5" />
+                <text x="20" y="20" fill="var(--text-muted)" fontSize="3" textAnchor="middle" dominantBaseline="middle" fontFamily="monospace">ROOM 412</text>
+
+                {/* Room 305 (Top Middle) */}
+                <rect x="40" y="5" width="20" height="30" fill="rgba(15, 26, 54, 0.4)" stroke="var(--glass-border)" strokeWidth="0.5" />
+                <text x="50" y="20" fill="var(--text-muted)" fontSize="3" textAnchor="middle" dominantBaseline="middle" fontFamily="monospace">ROOM 305</text>
+
+                {/* East Wing (Top Right to Bottom Right) */}
+                <rect x="65" y="5" width="30" height="70" fill="rgba(15, 26, 54, 0.2)" stroke="var(--glass-border)" strokeWidth="0.5" />
+                <text x="80" y="40" fill="var(--text-muted)" fontSize="3" textAnchor="middle" dominantBaseline="middle" fontFamily="monospace" transform="rotate(90 80 40)">EAST WING CORRIDOR</text>
+
+                {/* Pool Deck (Bottom Left) */}
+                <rect x="5" y="50" width="30" height="40" fill="rgba(0, 229, 255, 0.05)" stroke="var(--glass-border)" strokeWidth="0.5" />
+                <path d="M 10 80 Q 20 85, 30 80 Q 20 75, 10 80" fill="none" stroke="rgba(0, 229, 255, 0.3)" strokeWidth="0.2" />
+                <text x="20" y="70" fill="var(--text-muted)" fontSize="3" textAnchor="middle" dominantBaseline="middle" fontFamily="monospace">POOL DECK</text>
+
+                {/* Main Lobby (Bottom Middle) */}
+                <rect x="40" y="50" width="20" height="40" fill="rgba(15, 26, 54, 0.6)" stroke="var(--accent)" strokeWidth="0.5" />
+                <text x="50" y="75" fill="var(--accent)" fontSize="3" textAnchor="middle" dominantBaseline="middle" fontFamily="monospace">LOBBY</text>
+                
+                {/* Connecting Hallway */}
+                <rect x="35" y="40" width="30" height="5" fill="none" stroke="var(--glass-border)" strokeWidth="0.5" />
+              </svg>
+
               {incidents.filter(i => i.x && i.y).map(incident => (
                 <div 
                   key={`pin-${incident.id}`} 
@@ -160,10 +192,6 @@ export default function Dashboard() {
                   title={incident.type}
                 />
               ))}
-              
-              <svg style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', pointerEvents: 'none' }}>
-                <path d="M 20% 30% L 20% 80% L 10% 80%" stroke="var(--success)" strokeWidth="2" strokeDasharray="4 4" fill="none" />
-              </svg>
             </div>
 
             <div className={styles.mapOverlay}>
