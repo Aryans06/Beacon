@@ -72,11 +72,11 @@ export default function LandingPage() {
           </p>
 
           <div className={styles.heroActions}>
-            <Link href="/dashboard" className={styles.btnPrimary}>
-              🛡️ Open Command Center
-            </Link>
             <Link href="/sos" className={styles.btnCritical}>
               🚨 Guest SOS Portal
+            </Link>
+            <Link href="/staff" className={styles.btnPrimary}>
+              📡 Staff Alert Channel
             </Link>
           </div>
 
@@ -254,15 +254,21 @@ export default function LandingPage() {
             Ready to See It In Action?
           </h2>
           <p className={styles.ctaSubtitle}>
-            Launch the command center to explore the full crisis simulation
-            dashboard, or open the SOS portal to experience the guest view.
+            Experience every interface of the Beacon platform — from the guest&apos;s
+            phone to the responder&apos;s pager.
           </p>
           <div className={styles.heroActions}>
-            <Link href="/dashboard" className={styles.btnPrimary}>
-              Launch Dashboard →
+            <Link href="/sos" className={styles.btnCritical}>
+              🚨 Guest SOS
             </Link>
-            <Link href="/sos" className={styles.btnGhost}>
-              Try Guest SOS
+            <Link href="/staff" className={styles.btnPrimary}>
+              📡 Staff Channel
+            </Link>
+            <Link href="/dispatch" className={styles.btnGhost}>
+              🚑 Dispatch View
+            </Link>
+            <Link href="/report" className={styles.btnGhost}>
+              📋 AI Reports
             </Link>
           </div>
         </div>

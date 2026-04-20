@@ -1,0 +1,243 @@
+.channelPage {
+  min-height: 100vh;
+  height: 100vh;
+  background: var(--bg-primary);
+  display: flex;
+  flex-direction: column;
+}
+
+/* ---- Channel Header ---- */
+.channelHeader {
+  padding: 14px 20px;
+  background: rgba(5, 10, 21, 0.92);
+  backdrop-filter: blur(20px);
+  border-bottom: 1px solid var(--glass-border);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-shrink: 0;
+}
+
+.channelInfo {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.channelAvatar {
+  width: 36px;
+  height: 36px;
+  border-radius: 10px;
+  background: linear-gradient(135deg, var(--critical), #e11d48);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1rem;
+  box-shadow: 0 0 12px var(--critical-glow);
+}
+
+.channelName {
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: var(--text-primary);
+}
+
+.channelSub {
+  font-size: 0.68rem;
+  color: var(--text-muted);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.onlineDot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--success);
+  box-shadow: 0 0 6px var(--success);
+}
+
+.channelActions {
+  display: flex;
+  gap: 10px;
+}
+
+.channelLink {
+  font-size: 0.7rem;
+  color: var(--text-muted);
+  text-decoration: none;
+  padding: 5px 12px;
+  border: 1px solid var(--glass-border);
+  border-radius: var(--radius-sm);
+}
+
+/* ---- Message Feed ---- */
+.messageFeed {
+  flex: 1;
+  overflow-y: auto;
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+/* ---- Alert Card (incoming incident) ---- */
+.alertCard {
+  max-width: 600px;
+  border-radius: var(--radius-md);
+  overflow: hidden;
+  animation: slideInUp 0.4s ease-out both;
+}
+
+@keyframes slideInUp {
+  from { opacity: 0; transform: translateY(16px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+.alertCardCritical {
+  background: linear-gradient(135deg, rgba(255, 59, 92, 0.08), rgba(15, 26, 54, 0.6));
+  border: 1px solid rgba(255, 59, 92, 0.25);
+}
+
+.alertCardWarning {
+  background: linear-gradient(135deg, rgba(255, 176, 32, 0.08), rgba(15, 26, 54, 0.6));
+  border: 1px solid rgba(255, 176, 32, 0.2);
+}
+
+.alertCardInfo {
+  background: linear-gradient(135deg, rgba(68, 138, 255, 0.08), rgba(15, 26, 54, 0.6));
+  border: 1px solid rgba(68, 138, 255, 0.2);
+}
+
+.alertSender {
+  padding: 10px 16px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.7rem;
+  font-weight: 700;
+  border-bottom: 1px solid rgba(255,255,255,0.04);
+}
+
+.alertSenderCritical { color: var(--critical); }
+.alertSenderWarning { color: var(--warning); }
+.alertSenderInfo { color: var(--info); }
+
+.alertSenderTime {
+  margin-left: auto;
+  font-weight: 400;
+  color: var(--text-muted);
+  font-family: var(--font-mono);
+  font-size: 0.6rem;
+}
+
+.alertBody {
+  padding: 14px 16px;
+}
+
+.alertTitle {
+  font-size: 0.9rem;
+  font-weight: 700;
+  color: var(--text-primary);
+  margin-bottom: 6px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.alertSummary {
+  font-size: 0.78rem;
+  color: var(--text-secondary);
+  line-height: 1.5;
+  margin-bottom: 12px;
+}
+
+.alertTranslation {
+  font-size: 0.72rem;
+  color: var(--accent);
+  font-style: italic;
+  background: var(--accent-dim);
+  padding: 8px 12px;
+  border-radius: var(--radius-sm);
+  border-left: 2px solid var(--accent);
+  margin-bottom: 12px;
+}
+
+.alertProtocol {
+  font-size: 0.72rem;
+  color: var(--text-primary);
+  padding-left: 16px;
+  line-height: 1.6;
+}
+
+.alertProtocol li { margin-bottom: 2px; }
+.alertProtocol li::marker { color: var(--accent); }
+
+/* ---- Response Actions ---- */
+.alertActions {
+  padding: 10px 16px;
+  border-top: 1px solid rgba(255,255,255,0.04);
+  display: flex;
+  gap: 8px;
+}
+
+.respondBtn {
+  flex: 1;
+  padding: 8px;
+  border-radius: var(--radius-sm);
+  font-size: 0.7rem;
+  font-weight: 700;
+  transition: all 0.2s;
+}
+
+.respondBtnPrimary {
+  background: var(--accent-dim);
+  color: var(--accent);
+  border: 1px solid rgba(0, 229, 255, 0.15);
+}
+.respondBtnPrimary:hover { background: rgba(0, 229, 255, 0.15); }
+
+.respondBtnDanger {
+  background: var(--critical-dim);
+  color: var(--critical);
+  border: 1px solid rgba(255, 59, 92, 0.15);
+}
+.respondBtnDanger:hover { background: rgba(255, 59, 92, 0.15); }
+
+/* ---- System messages ---- */
+.systemMsg {
+  text-align: center;
+  font-size: 0.68rem;
+  color: var(--text-muted);
+  padding: 8px;
+}
+
+/* ---- Responded badge ---- */
+.respondedBadge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 0.65rem;
+  font-weight: 700;
+  color: var(--success);
+  background: var(--success-dim);
+  padding: 2px 8px;
+  border-radius: var(--radius-full);
+  margin-left: 8px;
+}
+
+/* Empty state */
+.emptyFeed {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  color: var(--text-muted);
+  gap: 12px;
+  text-align: center;
+}
+
+.emptyFeedIcon { font-size: 2.5rem; opacity: 0.3; }
+.emptyFeedText { font-size: 0.85rem; max-width: 300px; line-height: 1.5; }

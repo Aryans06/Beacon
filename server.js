@@ -6,30 +6,45 @@ const dev = process.env.NODE_ENV !== "production";
 const hostname = "localhost";
 const port = 3000;
 
-// Initialize Next.js app
 const app = next({ dev, hostname, port });
 const handler = app.getRequestHandler();
 
+// --- In-memory incident store (persists across page navigations) ---
+const incidents = [];
+
 app.prepare().then(() => {
   const httpServer = createServer(handler);
-
-  // Initialize Socket.io server
   const io = new Server(httpServer);
 
   io.on("connection", (socket) => {
     console.log("Client connected:", socket.id);
 
-    // Listen for SOS alerts from the mobile app
+    // Send existing incidents to newly connected clients
+    socket.emit("incident_history", incidents);
+
+    // SOS alerts from the mobile guest portal
     socket.on("sos_alert", (data) => {
-      console.log("Received SOS alert from mobile:", data);
-      // Broadcast this alert to the dashboard
-      io.emit("new_incident", data);
+      console.log("SOS alert:", data.type, "at", data.location);
+      const incident = { ...data, receivedAt: Date.now() };
+      incidents.push(incident);
+      io.emit("new_incident", incident);
     });
-    
-    // Listen for simulation triggers from the dashboard
+
+    // Simulation triggers from the controller
     socket.on("trigger_simulation", (data) => {
-       console.log("Dashboard requested simulation:", data);
-       io.emit("new_incident", data);
+      console.log("Simulation:", data.type, "at", data.location);
+      const incident = { ...data, receivedAt: Date.now() };
+      incidents.push(incident);
+      io.emit("new_incident", incident);
+    });
+
+    // Incident status updates (acknowledge/resolve)
+    socket.on("update_incident", (data) => {
+      const idx = incidents.findIndex(i => i.id === data.id);
+      if (idx !== -1) {
+        incidents[idx] = { ...incidents[idx], status: data.status };
+        io.emit("incident_updated", { id: data.id, status: data.status });
+      }
     });
 
     socket.on("disconnect", () => {
