@@ -4,6 +4,10 @@ import styles from "./page.module.css";
 import Link from "next/link";
 import { useState, useEffect, useRef } from "react";
 import { socket } from "../lib/socket";
+import dynamic from "next/dynamic";
+
+// Dynamic import of MapComponent because Leaflet needs `window`
+const DynamicMap = dynamic(() => import("../components/MapComponent"), { ssr: false });
 
 /* ------------------------------------------------------------------ */
 /*  Types                                                              */
@@ -17,6 +21,8 @@ interface Incident {
   desc?: string;
   x?: number;
   y?: number;
+  lat?: number;
+  lng?: number;
   status?: "active" | "acknowledged" | "resolved";
   aiData?: {
     translation?: string;
@@ -30,38 +36,42 @@ interface Incident {
 }
 
 /* ------------------------------------------------------------------ */
-/*  Location → coordinate helper                                       */
+/*  Location → Real Coordinates helper (Connaught Place, New Delhi)    */
 /* ------------------------------------------------------------------ */
-const locationMap: Record<string, { x: number; y: number; zone: string }> = {
-  lobby:     { x: 50, y: 78, zone: "Main Lobby" },
-  pool:      { x: 18, y: 72, zone: "Pool Deck" },
-  "412":     { x: 18, y: 18, zone: "Room 412" },
-  "305":     { x: 50, y: 18, zone: "Room 305" },
-  "201":     { x: 35, y: 42, zone: "Room 201" },
-  east:      { x: 80, y: 45, zone: "East Wing" },
-  restaurant:{ x: 80, y: 78, zone: "Restaurant" },
-  parking:   { x: 80, y: 18, zone: "Parking Deck" },
+const locationMap: Record<string, { lat: number; lng: number }> = {
+  lobby:     { lat: 28.6320, lng: 77.2185 }, // Center CP
+  pool:      { lat: 28.6335, lng: 77.2170 }, // Inner circle North
+  "412":     { lat: 28.6310, lng: 77.2200 }, // Radial road
+  "305":     { lat: 28.6325, lng: 77.2210 }, // Outer circle
+  "201":     { lat: 28.6305, lng: 77.2175 },
+  east:      { lat: 28.6315, lng: 77.2225 }, // East side CP
+  restaurant:{ lat: 28.6330, lng: 77.2190 },
+  parking:   { lat: 28.6340, lng: 77.2200 },
 };
 
-function getCoordinatesForLocation(loc?: string): { x: number; y: number } {
-  if (!loc) return { x: 50, y: 50 };
+function getCoordinatesForLocation(loc?: string): { lat: number; lng: number } {
+  if (!loc) return { lat: 28.6320, lng: 77.2185 };
   const l = loc.toLowerCase();
   for (const [key, val] of Object.entries(locationMap)) {
-    if (l.includes(key)) return { x: val.x, y: val.y };
+    if (l.includes(key)) return { lat: val.lat, lng: val.lng };
   }
-  return { x: 35 + Math.random() * 30, y: 35 + Math.random() * 30 };
+  // Random offset around Center of CP
+  return { 
+    lat: 28.6320 + (Math.random() - 0.5) * 0.005, 
+    lng: 77.2185 + (Math.random() - 0.5) * 0.005 
+  };
 }
 
 /* ------------------------------------------------------------------ */
 /*  Initial seed data                                                  */
 /* ------------------------------------------------------------------ */
 const initialIncidents: Incident[] = [
-  { id: 1, type: "Weapon Detected", location: "Lobby Entrance", time: "12:44:01", severity: "critical", x: 50, y: 78, status: "active",
+  { id: 1, type: "Weapon Detected", location: "Lobby Entrance", time: "12:44:01", severity: "critical", lat: 28.6320, lng: 77.2185, status: "active",
     aiData: { threatType: "Security", severity: "critical", summary: "CCTV Camera L-04 detected a drawn firearm near main entrance.", protocol: ["Initiate Code Silver lockdown", "Dispatch armed response team Alpha", "Push silent alert to all ground floor staff", "Notify local PD (auto-dialed)"], translation: "AI Vision confidence: 96.2%" } },
-  { id: 2, type: "Guest SOS (Translated)", location: "Room 412", time: "12:42:30", severity: "warning", x: 18, y: 18, status: "acknowledged",
+  { id: 2, type: "Guest SOS (Translated)", location: "Room 412", time: "12:42:30", severity: "warning", lat: 28.6310, lng: 77.2200, status: "acknowledged",
     desc: "Medical issue reported",
     aiData: { threatType: "Medical", severity: "warning", room: "412", summary: "Guest reported severe chest pain. Translated from Spanish.", protocol: ["Dispatch on-site medic to Room 412", "Retrieve nearest AED from Floor 4 station", "Clear elevator 2 for EMS access"], translation: "\"Ayuda, tengo dolor en el pecho\" → Help, I have chest pain", instructions: "Stay calm. Medical help is being dispatched to Room 412." } },
-  { id: 3, type: "Crowd Anomaly", location: "Pool Deck", time: "12:35:10", severity: "info", x: 18, y: 72, status: "resolved",
+  { id: 3, type: "Crowd Anomaly", location: "Pool Deck", time: "12:35:10", severity: "info", lat: 28.6335, lng: 77.2170, status: "resolved",
     aiData: { threatType: "Other", severity: "info", summary: "Unusual clustering detected near pool area. Likely a wedding event.", protocol: ["Monitor for 15 minutes", "No action required if event is authorized"] } }
 ];
 
@@ -90,8 +100,9 @@ export default function Dashboard() {
     socket.connect();
 
     socket.on("new_incident", (data: Incident) => {
+      // Map to real world coords
       const coords = getCoordinatesForLocation(data.aiData?.room || data.location);
-      const mappedData: Incident = { ...data, x: coords.x, y: coords.y, status: "active" };
+      const mappedData: Incident = { ...data, lat: coords.lat, lng: coords.lng, status: "active" };
       setIncidents(prev => [mappedData, ...prev]);
       setSelectedIncidentId(mappedData.id);
 
@@ -226,94 +237,18 @@ export default function Dashboard() {
         {/* -------- CENTER: Threat Map -------- */}
         <section className={`${styles.panel} ${styles.mapPanel}`}>
           <div className={styles.panelHeader}>
-            <span className={styles.panelTitle}>Threat Map — Floor 1</span>
+            <span className={styles.panelTitle}>Live Operations Map</span>
           </div>
 
           <div className={styles.mapContainer}>
             <div className={styles.blueprint}>
-              <svg className={styles.floorplanSvg} viewBox="0 0 100 100" preserveAspectRatio="xMidYMid meet">
-                <defs>
-                  <pattern id="grid" width="5" height="5" patternUnits="userSpaceOnUse">
-                    <path d="M 5 0 L 0 0 0 5" fill="none" stroke="rgba(0, 229, 255, 0.04)" strokeWidth="0.3" />
-                  </pattern>
-                </defs>
-                <rect width="100" height="100" fill="url(#grid)" />
-
-                {/* ---- Rooms ---- */}
-                {/* Room 412 */}
-                <rect x="5" y="5" width="25" height="25" rx="1" fill="rgba(15, 26, 54, 0.5)" stroke="rgba(120, 150, 255, 0.15)" strokeWidth="0.4" />
-                <text x="17.5" y="14" fill="rgba(120,150,255,0.3)" fontSize="2.5" textAnchor="middle" fontFamily="monospace">RM 412</text>
-                <rect x="7" y="17" width="8" height="5" rx="0.5" fill="none" stroke="rgba(120,150,255,0.08)" strokeWidth="0.2" />
-                <rect x="18" y="17" width="5" height="5" rx="0.5" fill="none" stroke="rgba(120,150,255,0.08)" strokeWidth="0.2" />
-
-                {/* Room 305 */}
-                <rect x="38" y="5" width="25" height="25" rx="1" fill="rgba(15, 26, 54, 0.5)" stroke="rgba(120, 150, 255, 0.15)" strokeWidth="0.4" />
-                <text x="50.5" y="14" fill="rgba(120,150,255,0.3)" fontSize="2.5" textAnchor="middle" fontFamily="monospace">RM 305</text>
-                <rect x="40" y="17" width="8" height="5" rx="0.5" fill="none" stroke="rgba(120,150,255,0.08)" strokeWidth="0.2" />
-
-                {/* Parking / East Wing */}
-                <rect x="70" y="5" width="25" height="25" rx="1" fill="rgba(15, 26, 54, 0.3)" stroke="rgba(120, 150, 255, 0.1)" strokeWidth="0.4" />
-                <text x="82.5" y="18" fill="rgba(120,150,255,0.25)" fontSize="2" textAnchor="middle" fontFamily="monospace">PARKING</text>
-
-                {/* Hallway */}
-                <rect x="5" y="33" width="90" height="8" rx="0.5" fill="rgba(15, 26, 54, 0.2)" stroke="rgba(120, 150, 255, 0.08)" strokeWidth="0.3" />
-                <text x="50" y="38" fill="rgba(120,150,255,0.15)" fontSize="1.8" textAnchor="middle" fontFamily="monospace">── MAIN CORRIDOR ──</text>
-
-                {/* East Wing */}
-                <rect x="70" y="33" width="25" height="55" rx="1" fill="rgba(15, 26, 54, 0.25)" stroke="rgba(120, 150, 255, 0.1)" strokeWidth="0.4" />
-                <text x="82.5" y="60" fill="rgba(120,150,255,0.2)" fontSize="2" textAnchor="middle" fontFamily="monospace" transform="rotate(90 82.5 60)">EAST WING</text>
-
-                {/* Restaurant */}
-                <rect x="70" y="65" width="25" height="28" rx="1" fill="rgba(15, 26, 54, 0.4)" stroke="rgba(120, 150, 255, 0.12)" strokeWidth="0.4" />
-                <text x="82.5" y="80" fill="rgba(120,150,255,0.25)" fontSize="2" textAnchor="middle" fontFamily="monospace">RESTAURANT</text>
-                {/* Tables */}
-                <circle cx="75" cy="75" r="1.5" fill="none" stroke="rgba(120,150,255,0.08)" strokeWidth="0.2" />
-                <circle cx="80" cy="73" r="1.5" fill="none" stroke="rgba(120,150,255,0.08)" strokeWidth="0.2" />
-                <circle cx="85" cy="76" r="1.5" fill="none" stroke="rgba(120,150,255,0.08)" strokeWidth="0.2" />
-
-                {/* Pool Deck */}
-                <rect x="5" y="45" width="25" height="48" rx="1" fill="rgba(0, 229, 255, 0.03)" stroke="rgba(0, 229, 255, 0.12)" strokeWidth="0.4" />
-                <text x="17.5" y="55" fill="rgba(0,229,255,0.25)" fontSize="2.2" textAnchor="middle" fontFamily="monospace">POOL</text>
-                <ellipse cx="17.5" cy="72" rx="8" ry="12" fill="rgba(0, 229, 255, 0.04)" stroke="rgba(0, 229, 255, 0.15)" strokeWidth="0.3" />
-                <path d="M 12 68 Q 17.5 72, 23 68" fill="none" stroke="rgba(0, 229, 255, 0.12)" strokeWidth="0.2" />
-                <path d="M 12 73 Q 17.5 77, 23 73" fill="none" stroke="rgba(0, 229, 255, 0.1)" strokeWidth="0.2" />
-
-                {/* Lobby */}
-                <rect x="35" y="45" width="30" height="48" rx="1" fill="rgba(15, 26, 54, 0.6)" stroke="rgba(0, 229, 255, 0.2)" strokeWidth="0.5" />
-                <text x="50" y="60" fill="rgba(0,229,255,0.35)" fontSize="3" textAnchor="middle" fontFamily="monospace" fontWeight="bold">LOBBY</text>
-                {/* Entrance markers */}
-                <line x1="45" y1="93" x2="55" y2="93" stroke="rgba(0,229,255,0.3)" strokeWidth="0.8" />
-                <text x="50" y="97" fill="rgba(0,229,255,0.2)" fontSize="1.5" textAnchor="middle" fontFamily="monospace">MAIN ENTRANCE</text>
-
-                {/* Room 201 */}
-                <rect x="35" y="33" width="12" height="8" rx="0.5" fill="rgba(15, 26, 54, 0.35)" stroke="rgba(120, 150, 255, 0.1)" strokeWidth="0.3" />
-                <text x="41" y="38" fill="rgba(120,150,255,0.2)" fontSize="1.8" textAnchor="middle" fontFamily="monospace">201</text>
-
-                {/* Emergency exits */}
-                <rect x="1" y="90" width="3" height="6" rx="0.5" fill="rgba(0, 230, 118, 0.15)" stroke="var(--success)" strokeWidth="0.3" />
-                <text x="2.5" y="98" fill="rgba(0,230,118,0.3)" fontSize="1.2" textAnchor="middle" fontFamily="monospace">EXIT</text>
-
-                <rect x="96" y="90" width="3" height="6" rx="0.5" fill="rgba(0, 230, 118, 0.15)" stroke="var(--success)" strokeWidth="0.3" />
-                <text x="97.5" y="98" fill="rgba(0,230,118,0.3)" fontSize="1.2" textAnchor="middle" fontFamily="monospace">EXIT</text>
-              </svg>
-
-              {/* Dynamic Pins */}
-              {incidents.filter(i => i.x && i.y && i.status !== "resolved").map(incident => (
-                <div
-                  key={`pin-${incident.id}`}
-                  onClick={() => setSelectedIncidentId(incident.id)}
-                  className={`${styles.mapPin} ${
-                    incident.severity === "critical" ? styles.pinCritical :
-                    incident.severity === "warning" ? styles.pinWarning : styles.pinInfo
-                  } ${selectedIncidentId === incident.id ? styles.pinSelected : ""}`}
-                  style={{ top: `${incident.y}%`, left: `${incident.x}%` }}
-                  title={`${incident.type} — ${incident.location}`}
-                >
-                  {selectedIncidentId === incident.id && (
-                    <div className={styles.pinLabel}>{incident.type}</div>
-                  )}
-                </div>
-              ))}
+              {/* REAL MAP COMPONENT */}
+              <DynamicMap 
+                incidents={incidents.filter(i => i.status !== "resolved")} 
+                selectedId={selectedIncidentId} 
+                onSelect={setSelectedIncidentId} 
+                center={[28.6320, 77.2185]} // Center on Connaught Place, New Delhi
+              />
             </div>
 
             {/* Map legend */}
@@ -322,7 +257,6 @@ export default function Dashboard() {
                 <span><span style={{ color: "var(--critical)" }}>●</span> Critical</span>
                 <span><span style={{ color: "var(--warning)" }}>●</span> Warning</span>
                 <span><span style={{ color: "var(--info)" }}>●</span> Info</span>
-                <span><span style={{ color: "var(--success)" }}>■</span> Exit</span>
               </div>
             </div>
           </div>
