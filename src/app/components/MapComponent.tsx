@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useCallback } from "react";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
 
@@ -28,90 +28,76 @@ interface MapComponentProps {
   center?: [number, number];
 }
 
-// Pulsing marker HTML for different severities
-function markerHtml(severity: string, selected: boolean): string {
-  const colors: Record<string, string> = {
-    critical: "#ff3b5c",
-    warning: "#ffb020",
-    info: "#448aff",
+function markerHtml(severity: string, isSelected: boolean): string {
+  const colors: Record<string, { bg: string; ring: string }> = {
+    critical: { bg: "#ef4444", ring: "rgba(239,68,68,0.4)" },
+    warning:  { bg: "#f59e0b", ring: "rgba(245,158,11,0.4)" },
+    info:     { bg: "#3b82f6", ring: "rgba(59,130,246,0.4)" },
   };
-  const color = colors[severity] || colors.info;
-  const size = selected ? 22 : 16;
-  const ringSize = selected ? 44 : 32;
+  const c = colors[severity] || colors.info;
+  const dotSize = isSelected ? 14 : 10;
 
-  return `
-    <div style="position:relative;width:${ringSize}px;height:${ringSize}px;display:flex;align-items:center;justify-content:center;">
-      <div style="
-        width:${size}px;height:${size}px;
-        background:${color};
-        border-radius:50%;
-        border:2px solid rgba(255,255,255,0.9);
-        box-shadow:0 0 16px ${color}80, 0 0 32px ${color}40;
-        z-index:2;
-      "></div>
-      <div style="
-        position:absolute;
-        width:${ringSize}px;height:${ringSize}px;
-        border-radius:50%;
-        border:2px solid ${color};
-        opacity:0.5;
-        animation: ping 2s cubic-bezier(0,0,0.2,1) infinite;
-      "></div>
-    </div>
-    <style>
-      @keyframes ping {
-        0% { transform:scale(1); opacity:0.5; }
-        100% { transform:scale(2.2); opacity:0; }
-      }
-    </style>
-  `;
+  return `<div style="
+    width:${dotSize}px;
+    height:${dotSize}px;
+    background:${c.bg};
+    border-radius:50%;
+    border:2px solid #fff;
+    box-shadow: 0 0 0 ${isSelected ? '6' : '4'}px ${c.ring}, 0 1px 4px rgba(0,0,0,0.3);
+    transition: all 0.2s;
+  "></div>`;
 }
 
 export default function MapComponent({ incidents, selectedId, onSelect, center }: MapComponentProps) {
   const mapRef = useRef<L.Map | null>(null);
   const markersRef = useRef<Map<number, L.Marker>>(new Map());
   const containerRef = useRef<HTMLDivElement>(null);
+  const onSelectRef = useRef(onSelect);
+  onSelectRef.current = onSelect;
 
-  // Initialize map
+  // Initialize map once
   useEffect(() => {
     if (!containerRef.current || mapRef.current) return;
 
     const map = L.map(containerRef.current, {
-      center: center || [28.6139, 77.2090], // Default: New Delhi
+      center: center || [28.6320, 77.2185],
       zoom: 16,
       zoomControl: false,
       attributionControl: false,
     });
 
-    // Dark map tiles
-    L.tileLayer("https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png", {
+    // Clean, professional map tiles (Stadia Alidade Smooth Dark)
+    L.tileLayer("https://tiles.stadiamaps.com/tiles/alidade_smooth_dark/{z}/{x}/{y}{r}.png", {
       maxZoom: 20,
     }).addTo(map);
 
-    // Add zoom control to top-right
     L.control.zoom({ position: "topright" }).addTo(map);
 
-    // Attribution bottom-right
     L.control.attribution({ position: "bottomright", prefix: false })
-      .addAttribution('© <a href="https://carto.com">CARTO</a>')
+      .addAttribution('© <a href="https://stadiamaps.com/">Stadia</a> © <a href="https://openmaptiles.org/">OpenMapTiles</a>')
       .addTo(map);
 
     mapRef.current = map;
 
+    // Force a resize after mount to fix tile rendering
+    setTimeout(() => map.invalidateSize(), 200);
+
     return () => {
       map.remove();
       mapRef.current = null;
+      markersRef.current.clear();
     };
-  }, [center]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
-  // Sync markers with incidents
+  // Sync markers whenever incidents or selection changes
   useEffect(() => {
     const map = mapRef.current;
     if (!map) return;
 
     const currentIds = new Set(incidents.map(i => i.id));
 
-    // Remove markers for incidents that no longer exist
+    // Remove stale markers
     markersRef.current.forEach((marker, id) => {
       if (!currentIds.has(id)) {
         marker.remove();
@@ -119,53 +105,42 @@ export default function MapComponent({ incidents, selectedId, onSelect, center }
       }
     });
 
-    // Add or update markers
+    // Upsert markers
     incidents.forEach((incident) => {
       if (!incident.lat || !incident.lng) return;
-
       const isSelected = incident.id === selectedId;
+      const icon = L.divIcon({
+        html: markerHtml(incident.severity, isSelected),
+        iconSize: [isSelected ? 14 : 10, isSelected ? 14 : 10],
+        iconAnchor: [isSelected ? 7 : 5, isSelected ? 7 : 5],
+        className: "beacon-marker",
+      });
+
       const existing = markersRef.current.get(incident.id);
-
       if (existing) {
-        // Update icon if selection changed
-        existing.setIcon(L.divIcon({
-          html: markerHtml(incident.severity, isSelected),
-          iconSize: [isSelected ? 44 : 32, isSelected ? 44 : 32],
-          iconAnchor: [isSelected ? 22 : 16, isSelected ? 22 : 16],
-          className: "",
-        }));
+        existing.setIcon(icon);
       } else {
-        // Create new marker
-        const icon = L.divIcon({
-          html: markerHtml(incident.severity, isSelected),
-          iconSize: [isSelected ? 44 : 32, isSelected ? 44 : 32],
-          iconAnchor: [isSelected ? 22 : 16, isSelected ? 22 : 16],
-          className: "",
-        });
-
         const marker = L.marker([incident.lat, incident.lng], { icon })
           .addTo(map)
           .bindPopup(`
-            <div style="font-family:'Inter',sans-serif;min-width:200px;">
-              <div style="font-weight:700;font-size:13px;margin-bottom:4px;">${incident.type}</div>
-              <div style="font-size:11px;color:#888;margin-bottom:8px;">📍 ${incident.location} • ${incident.time}</div>
-              ${incident.aiData?.summary ? `<div style="font-size:12px;line-height:1.4;margin-bottom:6px;">${incident.aiData.summary}</div>` : ""}
+            <div style="font-family:'Inter',sans-serif;min-width:180px;padding:2px;">
+              <div style="font-weight:700;font-size:13px;color:#f0f4ff;margin-bottom:4px;">${incident.type}</div>
+              <div style="font-size:11px;color:#7b8db8;margin-bottom:6px;">📍 ${incident.location} · ${incident.time}</div>
+              ${incident.aiData?.summary ? `<div style="font-size:12px;color:#c8d3e8;line-height:1.4;margin-bottom:4px;">${incident.aiData.summary}</div>` : ""}
               ${incident.aiData?.translation ? `<div style="font-size:11px;color:#00e5ff;font-style:italic;">🌐 ${incident.aiData.translation}</div>` : ""}
             </div>
-          `, { className: "beacon-popup" })
-          .on("click", () => onSelect(incident.id));
+          `, { className: "beacon-popup", maxWidth: 280 })
+          .on("click", () => onSelectRef.current(incident.id));
 
         markersRef.current.set(incident.id, marker);
 
-        // Fly to new incident if it's critical
+        // Fly to new critical incidents
         if (incident.severity === "critical") {
-          map.flyTo([incident.lat, incident.lng], 17, { duration: 1.2 });
+          map.flyTo([incident.lat, incident.lng], 17, { duration: 1 });
         }
       }
     });
-  }, [incidents, selectedId, onSelect]);
+  }, [incidents, selectedId]);
 
-  return (
-    <div ref={containerRef} style={{ width: "100%", height: "100%", borderRadius: "inherit" }} />
-  );
+  return <div ref={containerRef} style={{ width: "100%", height: "100%", borderRadius: "inherit" }} />;
 }

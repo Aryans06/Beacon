@@ -99,26 +99,52 @@ export default function Dashboard() {
 
     socket.connect();
 
+    // Load existing incidents from server memory
+    socket.on("incident_history", (history: Incident[]) => {
+      if (history && history.length > 0) {
+        const mapped = history.map(d => {
+          const coords = getCoordinatesForLocation(d.aiData?.room || d.location);
+          return { ...d, lat: d.lat || coords.lat, lng: d.lng || coords.lng, status: d.status || "active" as const };
+        });
+        setIncidents(prev => {
+          const existingIds = new Set(prev.map(i => i.id));
+          const newOnes = mapped.filter(m => !existingIds.has(m.id));
+          return [...newOnes.reverse(), ...prev];
+        });
+      }
+    });
+
+    // New live incidents
     socket.on("new_incident", (data: Incident) => {
-      // Map to real world coords
       const coords = getCoordinatesForLocation(data.aiData?.room || data.location);
       const mappedData: Incident = { ...data, lat: coords.lat, lng: coords.lng, status: "active" };
-      setIncidents(prev => [mappedData, ...prev]);
+      setIncidents(prev => {
+        // Prevent duplicates
+        if (prev.some(i => i.id === mappedData.id)) return prev;
+        return [mappedData, ...prev];
+      });
       setSelectedIncidentId(mappedData.id);
 
-      // Flash the screen border on critical
       if (data.severity === "critical") {
         setAlertFlash(true);
         setTimeout(() => setAlertFlash(false), 3000);
       }
 
-      // Scroll feed to top
       feedRef.current?.scrollTo({ top: 0, behavior: "smooth" });
+    });
+
+    // Status updates from other views (staff channel, dispatch)
+    socket.on("incident_updated", (data: { id: number; status: string }) => {
+      setIncidents(prev => prev.map(i =>
+        i.id === data.id ? { ...i, status: data.status as Incident["status"] } : i
+      ));
     });
 
     return () => {
       clearInterval(timer);
+      socket.off("incident_history");
       socket.off("new_incident");
+      socket.off("incident_updated");
       socket.disconnect();
     };
   }, []);
